@@ -9,16 +9,32 @@ resource "aws_s3_bucket" "terraform_bucket" {
   }
 }
 
+
 # VIRTUAL MACHINE (EC2 Instance)
-resource "aws_instance" "test_vm" {
-  ami           = var.ami
-  instance_type = var.instance_type
+data "aws_ami" "cheapest_linux" {
+  most_recent = true
+  owners      = ["amazon"]
 
-
-  tags = {
-    Name = "terraform-test-vm"
+  filter {
+    name   = "name"
+    values = ["al2023-ami-minimal-*-arm64"]
   }
 }
+
+resource "aws_instance" "test_vm" {
+  ami           = data.aws_ami.cheapest_linux.id
+  instance_type = "t4g.micro"
+
+  root_block_device {
+    volume_size = 8
+    volume_type = "gp3"
+  }
+
+  tags = {
+    Name = "Terraform-ARM64-VM"
+  }
+}
+
 
 # AMAZON RDS DATABASE (PostgreSQL)
 resource "aws_db_instance" "terraform_test_db" {
@@ -34,4 +50,6 @@ resource "aws_db_instance" "terraform_test_db" {
   tags = {
     Name = "terraform-test-db"
   }
+
+  skip_final_snapshot    = true
 }

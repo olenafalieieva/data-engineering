@@ -13,19 +13,7 @@ variable "aws_profile" {
 variable "s3_bucket_name" {
   description = "S3 bucket name (must be globally unique)"
   type        = string
-  default     = "test-bucket"
-}
-
-variable "instance_type" {
-  description = "EC2 instance type"
-  type        = string
-  default     = "t3.micro"
-}
-
-variable "ami" {
-  description = "EC2 ami type"
-  type        = string
-  default     = "arn:aws:ssm:us-east-2::parameter/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-arm64"
+  default     = "test-bucket-olenka"
 }
 
 variable "db_allocated_storage" {

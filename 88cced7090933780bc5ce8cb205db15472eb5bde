@@ -1,0 +1,12 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "88cced7090933780bc5ce8cb205db15472eb5bde",
+  "prompts": {},
+  "humans": {
+    "h_6b5daad8a3deb3": {
+      "author": "olenafalieieiva <elena.faleeva@gmail.com>"
+    }
+  }
+}

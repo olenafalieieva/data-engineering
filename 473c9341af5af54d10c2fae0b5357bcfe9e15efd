@@ -1,0 +1,22 @@
+DevOpsHW/HW_1/terraform_intro/main.tf
+  h_aa63ad89b614d5 12,14-23,28-31,38,53-54
+  h_6b5daad8a3deb3 25-26,34
+DevOpsHW/HW_1/terraform_intro/.gitignore
+  h_6b5daad8a3deb3 2-3
+DevOpsHW/HW_1/terraform_intro/variables.tf
+  h_6b5daad8a3deb3 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "473c9341af5af54d10c2fae0b5357bcfe9e15efd",
+  "prompts": {},
+  "humans": {
+    "h_6b5daad8a3deb3": {
+      "author": "olenafalieieiva <elena.faleeva@gmail.com>"
+    },
+    "h_aa63ad89b614d5": {
+      "author": "Olena Falieieva <olena.falieieva@peoplefinders.com>"
+    }
+  }
+}

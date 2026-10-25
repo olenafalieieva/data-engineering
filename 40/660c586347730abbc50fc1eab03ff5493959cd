@@ -1,0 +1,40 @@
+.gitignore
+  h_aa63ad89b614d5 1-16
+build.gradle
+  h_aa63ad89b614d5 1-28
+src/main/java/org/replog/MasterApplication.java
+  h_aa63ad89b614d5 1-6
+src/main/java/org/replog/SecondaryApplication.java
+  h_aa63ad89b614d5 1-7
+src/main/java/org/replog/dto/AppendResponse.java
+  h_aa63ad89b614d5 1-42
+src/main/java/org/replog/dto/Message.java
+  h_aa63ad89b614d5 1-30
+src/main/java/org/replog/http/MasterHttpServer.java
+  h_aa63ad89b614d5 1-6
+src/main/java/org/replog/http/SecondaryHttpServer.java
+  h_aa63ad89b614d5 1-6
+src/main/java/org/replog/network/HttpNetworkClient.java
+  h_aa63ad89b614d5 1-64
+src/main/java/org/replog/network/Interface/NetworkClient.java
+  h_aa63ad89b614d5 1-10
+src/main/java/org/replog/network/QueueNetworkStub.java
+  h_aa63ad89b614d5 1-55
+src/main/java/org/replog/node/MasterNode.java
+  h_aa63ad89b614d5 1-89
+src/main/java/org/replog/node/SecondaryNode.java
+  h_aa63ad89b614d5 1-44
+src/main/java/org/replog/store/Interface/MessagesStore.java
+  h_aa63ad89b614d5 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "40660c586347730abbc50fc1eab03ff5493959cd",
+  "prompts": {},
+  "humans": {
+    "h_aa63ad89b614d5": {
+      "author": "Olena Falieieva <olena.falieieva@peoplefinders.com>"
+    }
+  }
+}

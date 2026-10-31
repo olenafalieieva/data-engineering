@@ -1,0 +1,76 @@
+src/main/java/org/replog/http/SecondaryHttpServer.java
+  h_aa63ad89b614d5 4-8,10-86,88
+src/main/java/org/replog/store/MessagesStoreRandomOrder.java
+  h_aa63ad89b614d5 1-46
+src/main/java/org/replog/MasterApplication.java
+  h_aa63ad89b614d5 4-14,17-65,67-148,150
+  h_aa63ad89b614d5 66
+src/main/java/org/replog/dto/Message.java
+  h_aa63ad89b614d5 3-7,13-16,24,28
+  h_aa63ad89b614d5 22-23,30
+build.gradle
+  h_aa63ad89b614d5 7,10-29
+src/main/java/org/replog/network/HttpNetworkClient.java
+  h_aa63ad89b614d5 28,34,36,40,45,48,50,57-58,60,70-74
+  h_aa63ad89b614d5 49
+src/main/java/org/replog/http/MasterHttpServer.java
+  h_aa63ad89b614d5 3-7,9-13,16-18,20-109,111-113
+  h_aa63ad89b614d5 8,19
+src/main/java/org/replog/network/Interface/NetworkClient.java
+  h_aa63ad89b614d5 8,10
+src/test/java/org/example/MasterSecondaryTest.java
+  s_127aa8a343c276::t_0bc7c864e21162 32-34,36-37,42,45-46,49,52-53
+  s_127aa8a343c276::t_db505f226b41b4 76-77,81,84-85,88
+  s_127aa8a343c276::t_8fea06a8691878 17
+  s_127aa8a343c276::t_bddd2ed6d491f8 22-23
+  s_b56add07d15d2c::t_89abe3751bc395 61-65
+  s_127aa8a343c276::t_45e85e2b3521fb 150-151,154-155,157,161-162,164,170-171,173-179,182-190
+  s_b56add07d15d2c::t_92ad50312ad67a 158-160,167-168
+  s_b56add07d15d2c::t_b3cba5e9aae531 13,16
+  h_aa63ad89b614d5 1-12,14-15,18-21,24-31,35,38-41,43-44,47-48,50-51,54-56,58-60,66-67,69-75,78-80,82-83,86-87,89-92,95-97,99-100,102-103,108-111,113,115-117,119-122,125-127,129-134,136-138,142-144,146-149,152-153,156,163,165-166,169,172,180-181,191-192,273
+  s_127aa8a343c276::t_8f00fcbc5e85f5 193-272
+  s_127aa8a343c276::t_2ca1f5615d9c1c 57,68
+  s_127aa8a343c276::t_c2b2f5b70ba791 93-94,98,101,104-107,112,114,118
+  s_127aa8a343c276::t_980b90a6eb2244 123-124,128,135,139-141,145
+src/main/java/org/replog/node/SecondaryNode.java
+  h_aa63ad89b614d5 11,23-30
+src/main/java/org/replog/network/QueueNetworkStub.java
+  s_b56add07d15d2c::t_4cf60e455c39cd 13,28,33-35,37-38,47-53,60-64
+  h_aa63ad89b614d5 23,45
+  s_b56add07d15d2c::t_8f0995c0901cad 65
+src/main/java/org/replog/SecondaryApplication.java
+  h_aa63ad89b614d5 4-7,9,12-47,49-78,80
+  h_aa63ad89b614d5 8
+src/main/java/org/replog/node/MasterNode.java
+  h_aa63ad89b614d5 38-39,51,54,56-58,61,70-71
+  h_aa63ad89b614d5 40-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cf2fe6f5d24eefc9b5d535b2d733067887fc6196",
+  "prompts": {},
+  "humans": {
+    "h_aa63ad89b614d5": {
+      "author": "Olena Falieieva <olena.falieieva@peoplefinders.com>"
+    }
+  },
+  "sessions": {
+    "s_127aa8a343c276": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "103fc8ec-0a4a-4f85-b221-57d388fcb8e6",
+        "model": "claude-haiku-4-5-20251001"
+      },
+      "human_author": "Olena Falieieva <olena.falieieva@peoplefinders.com>"
+    },
+    "s_b56add07d15d2c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "87800b27-dfb7-42dd-af00-2c60742c656e",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "Olena Falieieva <olena.falieieva@peoplefinders.com>"
+    }
+  }
+}

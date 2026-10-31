@@ -4,10 +4,29 @@ plugins {
 }
 
 application {
-    mainClass = 'org.example.Example'
+    mainClass = 'org.replog.MasterApplication'
 }
 
-group = 'org.example'
+run {
+    standardInput = System.in
+}
+
+tasks.register('runMaster', JavaExec) {
+    group = 'application'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'org.replog.MasterApplication'
+    standardInput = System.in
+}
+
+tasks.register('runSecondary', JavaExec) {
+    group = 'application'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'org.replog.SecondaryApplication'
+    standardInput = System.in
+}
+
+
+group = 'org.replog'
 version = '1.0-SNAPSHOT'
 
 repositories {

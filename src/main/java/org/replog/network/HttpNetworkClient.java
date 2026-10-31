@@ -25,33 +25,39 @@ public class HttpNetworkClient implements NetworkClient {
     }
 
     @Override
-    public CompletableFuture<Void> appendMessage(String slaveNodeId, Message message) {
+    public CompletableFuture<Integer> appendMessage(String slaveNodeId, Message message) {
         if (closed) {
             return CompletableFuture.failedFuture(new IllegalStateException("Network client is closed"));
         }
 
         String endpoint = slaveEndpoints.get(slaveNodeId);
+        System.out.printf("Replicating message '%s' to secondary with ID: '%s'%n", message, slaveNodeId);
         if (endpoint == null) {
-            return CompletableFuture.failedFuture(new IllegalArgumentException("Unknown slave node: " + slaveNodeId));
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Unknown secondary node: " + slaveNodeId));
         }
-
         try {
             String jsonBody = objectMapper.writeValueAsString(message);
+            System.out.println("POST " + endpoint + "/append body: " + jsonBody);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(endpoint + "/append"))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                    .timeout(java.time.Duration.ofSeconds(10))
+                    .timeout(java.time.Duration.ofSeconds(50))
                     .build();
 
-            return httpClient.sendAsync(request, HttpResponse.BodyHandlers.discarding())
+            System.out.printf("Start sending of message '%s' to secondary with ID: '%s'%n", message, slaveNodeId);
+
+            CompletableFuture<Integer> resp = httpClient.sendAsync(request, HttpResponse.BodyHandlers.discarding())
                     .thenApply(response -> {
                         if (response.statusCode() < 200 || response.statusCode() >= 300) {
                             throw new RuntimeException("HTTP error: " + response.statusCode());
                         }
                         return null;
                     });
+            System.out.printf("Finished sending of message '%s' to secondary with ID: '%s'%n", message, slaveNodeId);
+            return resp;
         } catch (Exception e) {
+            System.err.println("Sending for msg: '" + message + "' failed.");
             return CompletableFuture.failedFuture(e);
         }
     }
@@ -60,5 +66,10 @@ public class HttpNetworkClient implements NetworkClient {
     public CompletableFuture<Void> close() {
         closed = true;
         return CompletableFuture.completedFuture(null);
+    }
+
+    @Override
+    public Message getMessage(String slaveNodeId) throws InterruptedException {
+        throw new UnsupportedOperationException("Not implemented");
     }
 }

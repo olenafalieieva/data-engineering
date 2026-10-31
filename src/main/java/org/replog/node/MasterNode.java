@@ -31,12 +31,12 @@ public class MasterNode {
 
         int confirmations = 1;
 
-        if (writeConcern > 1) {
-            confirmations += replicateToSlaves(message);
-        }
-
         if (writeConcern == 1) {
             return AppendResponse.success(messageId, confirmations);
+        }
+
+        if (writeConcern > 1) {
+            confirmations += replicateToSlaves(message);
         }
 
         if (confirmations >= writeConcern) {
@@ -48,16 +48,17 @@ public class MasterNode {
     }
 
     private int replicateToSlaves(Message message) {
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+        List<CompletableFuture<Integer>> futures = new ArrayList<>();
 
         for (String slaveId : slaveNodeIds) {
-            CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(() -> {
+            CompletableFuture<Integer> future = CompletableFuture.supplyAsync(() -> {
                 try {
-                    networkClient.appendMessage(slaveId, message).join();
-                    return true;
+                    Integer res = networkClient.appendMessage(slaveId, message).join();
+                    return res;
+
                 } catch (Exception e) {
                     System.err.println("Failed to replicate to slave " + slaveId + ": " + e.getMessage());
-                    return false;
+                    return 0;
                 }
             }, replicationExecutor);
             futures.add(future);
@@ -66,8 +67,8 @@ public class MasterNode {
         try {
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
             int confirmations = 0;
-            for (CompletableFuture<Boolean> future : futures) {
-                if (future.join()) {
+            for (CompletableFuture<Integer> future : futures) {
+                if (future.join() != 0) {
                     confirmations++;
                 }
             }

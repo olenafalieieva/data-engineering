@@ -5,6 +5,7 @@ import org.replog.dto.Message;
 import java.util.concurrent.CompletableFuture;
 
 public interface NetworkClient {
-    CompletableFuture<Void> appendMessage(String slaveNodeId, Message message);
+    CompletableFuture<Integer> appendMessage(String slaveNodeId, Message message);
     CompletableFuture<Void> close();
+    Message getMessage(String slaveNodeId) throws InterruptedException;
 }

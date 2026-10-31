@@ -8,7 +8,7 @@ import java.util.List;
 public class SecondaryNode {
     private final MessagesStore store;
     private final String nodeId;
-    private final long delayMs;
+    private long delayMs;
 
     public SecondaryNode(String nodeId, MessagesStore store) {
         this(nodeId, store, 0L);
@@ -18,6 +18,14 @@ public class SecondaryNode {
         this.nodeId = nodeId;
         this.store = store;
         this.delayMs = delayMs;
+    }
+
+    public void setDelayMs(long delayMs) {
+        this.delayMs = delayMs;
+    }
+
+    public long getDelayMs() {
+        return delayMs;
     }
 
     public void append(Message message) {

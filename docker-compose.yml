@@ -1,0 +1,29 @@
+services:
+  master:
+    build: .
+    image: replicated-log
+    ports:
+      - "8080:8080"
+    command: ["--port", "8080", "--slave-endpoints", "slave1=http://slave1:8081,slave2=http://slave2:8082"]
+    depends_on:
+      - slave1
+      - slave2
+    # Keep stdin open and allocate a TTY so the master's interactive console works
+    stdin_open: true
+    tty: true
+
+  slave1:
+    build: .
+    image: replicated-log
+    entrypoint: ["java", "-cp", "/app/lib/*", "org.replog.SecondaryApplication"]
+    command: ["--id", "slave1", "--port", "8081"]
+    ports:
+      - "8081:8081"
+
+  slave2:
+    build: .
+    image: replicated-log
+    entrypoint: ["java", "-cp", "/app/lib/*", "org.replog.SecondaryApplication"]
+    command: ["--id", "slave2", "--port", "8082"]
+    ports:
+      - "8082:8082"

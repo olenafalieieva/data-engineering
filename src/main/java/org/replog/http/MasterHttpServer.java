@@ -11,8 +11,12 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class MasterHttpServer {
+    private static final Logger logger = Logger.getLogger(MasterHttpServer.class.getName());
+
     private final HttpServer server;
     private final MasterNode masterNode;
     private final ObjectMapper objectMapper;
@@ -37,18 +41,27 @@ public class MasterHttpServer {
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             Map<String, Object> request = objectMapper.readValue(body, Map.class);
             String content = (String) request.get("content");
+            if (content == null) {
+                sendEmptyResponse(exchange, 400);
+                return;
+            }
 
             int writeConcern = 3;
             if (request.containsKey("writeConcern")) {
                 writeConcern = ((Number) request.get("writeConcern")).intValue();
             }
+            if (writeConcern < 1 || writeConcern > 3) {
+                sendEmptyResponse(exchange, 400);
+                return;
+            }
 
             AppendResponse response = masterNode.append(content, writeConcern);
-            System.out.println("Append request processed successfully");
-            sendJsonResponse(exchange, 200, response);
-            System.out.printf("Append request with content: '%s' processed successfully%n", content);
+            // 503 when the write concern was not reached; the body still carries the details
+            int status = response.isSuccess() ? 200 : 503;
+            sendJsonResponse(exchange, status, response);
+            logger.info(String.format("Append request with content: '%s' processed successfully", content));
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Append request failed", e);
             sendEmptyResponse(exchange, 500);
         }
     }
@@ -62,9 +75,9 @@ public class MasterHttpServer {
 
             var messages = masterNode.getMessages();
             sendJsonResponse(exchange, 200, messages);
-            System.out.printf("List request for messages: '%s' processed successfully", messages);
+            logger.fine(String.format("List request for messages: '%s' processed successfully", messages));
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "List request failed", e);
             sendEmptyResponse(exchange, 500);
         }
     }
@@ -72,7 +85,7 @@ public class MasterHttpServer {
     private void sendJsonResponse(HttpExchange exchange, int statusCode, Object responseBody) {
         try {
             String jsonResponse = objectMapper.writeValueAsString(responseBody);
-            System.out.println("Sending JSON response: " + jsonResponse);
+            logger.fine("Sending JSON response: " + jsonResponse);
             byte[] responseBytes = jsonResponse.getBytes(StandardCharsets.UTF_8);
 
             exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
@@ -80,13 +93,12 @@ public class MasterHttpServer {
 
             try (OutputStream os = exchange.getResponseBody()) {
                 os.write(responseBytes);
-                System.out.println("Response sent successfully");
+                logger.fine("Response sent successfully");
             }
         } catch (IOException e) {
-            System.err.println("Client disconnected while writing response: " + e.getMessage());
+            logger.warning("Client disconnected while writing response: " + e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("An unexpected error occurred while processing the request: " + e.getMessage());
+            logger.log(Level.SEVERE, "An unexpected error occurred while processing the request", e);
         } finally {
             exchange.close();
         }
@@ -95,9 +107,9 @@ public class MasterHttpServer {
     private void sendEmptyResponse(HttpExchange exchange, int statusCode) {
         try {
             exchange.sendResponseHeaders(statusCode, -1);
-            System.out.println("Empty response sent successfully");
+            logger.fine("Empty response sent successfully");
         } catch (IOException e) {
-            System.err.println("Client disconnected before response could be sent: " + e.getMessage());
+            logger.warning("Client disconnected before response could be sent: " + e.getMessage());
         } finally {
             exchange.close();
         }
@@ -105,7 +117,7 @@ public class MasterHttpServer {
 
     public void start() {
         server.start();
-        System.out.println("Master HTTP Server started on port " + server.getAddress().getPort());
+        logger.info("Master HTTP Server started on port " + server.getAddress().getPort());
     }
 
     public void stop() {

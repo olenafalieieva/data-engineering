@@ -1,5 +1,6 @@
-package org.example;
+package org.replog;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.replog.dto.AppendResponse;
@@ -10,10 +11,9 @@ import org.replog.node.SecondaryNode;
 import org.replog.store.MessagesStoreRandomOrder;
 
 import java.util.Arrays;
-import java.util.concurrent.CompletableFuture;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -51,6 +51,11 @@ public class MasterSecondaryTest {
         startSlaveListeners(slave2);
 
         logger.info("=== SETUP COMPLETE ===\n");
+    }
+
+    @AfterEach
+    void tearDown() {
+        executor.shutdownNow();
     }
 
     private void startSlaveListeners(SecondaryNode slave) {
@@ -136,12 +141,20 @@ public class MasterSecondaryTest {
         assertEquals(3, messages.size());
 
         logger.info("[Step 4] Verifying message content and order");
-        logger.info("  Message 0: '" + messages.get(0).getContent() + "'");
-        logger.info("  Message 1: '" + messages.get(1).getContent() + "'");
-        logger.info("  Message 2: '" + messages.get(2).getContent() + "'");
+        logger.info("  Message 1: '" + messages.get(0).getContent() + "'");
+        logger.info("  Message 2: '" + messages.get(1).getContent() + "'");
+        logger.info("  Message 3: '" + messages.get(2).getContent() + "'");
+
         assertEquals("Message 1", messages.get(0).getContent());
         assertEquals("Message 2", messages.get(1).getContent());
         assertEquals("Message 3", messages.get(2).getContent());
+
+        logger.info("[Step 5] Verifying master and both slaves hold messages in the order they were appended");
+        String[] expectedOrder = {"Message 1", "Message 2", "Message 3"};
+        assertArrayEquals(expectedOrder, contents(masterNode.getMessages()), "Master order");
+        assertArrayEquals(expectedOrder, contents(slave1.getMessages()), "Slave1 order");
+        assertArrayEquals(expectedOrder, contents(slave2.getMessages()), "Slave2 order");
+
         logger.info("<<< TEST PASSED\n");
     }
 
@@ -152,41 +165,52 @@ public class MasterSecondaryTest {
         masterNode = new MasterNode(new MessagesStoreRandomOrder(), networkStub,
                 Arrays.asList("slave1", "slave2"));
 
-        logger.info("[Step 2] Setting slave2 delay to 1000ms");
+        logger.info("[Step 2] Setting slave2 delay to 1000ms (slave1 has no delay)");
         slave2.setDelayMs(1000);
 
-        logger.info("[Step 3] Appending two messages to master in the background (append blocks until acked)");
-        CompletableFuture<Void> appends = CompletableFuture.runAsync(() -> masterNode.append("Message 1", 3), executor)
-                .thenRunAsync(() -> masterNode.append("Message 2", 3), executor);
+        logger.info("[Step 3] Appending Message 1 - should block ~1000ms until slave2 ACKs");
+        long start1 = System.currentTimeMillis();
+        AppendResponse response1 = masterNode.append("Message 1", 3);
+        long duration1 = System.currentTimeMillis() - start1;
+        logger.info("  Message 1 append duration: " + duration1 + "ms");
+        assertTrue(response1.isSuccess());
+        assertTrue(duration1 >= 900 && duration1 < 1500,
+                "Append should block ~1000ms for slave2, but took " + duration1 + "ms");
 
-        logger.info("[Step 4] Verifying slave2 has NO messages after 200ms (both delays pending)");
-        Thread.sleep(200);
-        logger.info("  Slave2 messages after 200ms: " + slave2.getMessages().size());
-        assertEquals(0, slave2.getMessages().size());
+        logger.info("[Step 4] Verifying slave2 already stored Message 1 when append returned (ACK after store)");
+        assertEquals(1, slave2.getMessages().size());
 
-        logger.info("[Step 5] Waiting for both appends to complete (1000ms delay each)");
-        appends.get(5, TimeUnit.SECONDS);
+        logger.info("[Step 5] Appending Message 2 - should block ~1000ms again");
+        long start2 = System.currentTimeMillis();
+        AppendResponse response2 = masterNode.append("Message 2", 3);
+        long duration2 = System.currentTimeMillis() - start2;
+        logger.info("  Message 2 append duration: " + duration2 + "ms");
+        assertTrue(response2.isSuccess());
+        assertTrue(duration2 >= 900 && duration2 < 1500,
+                "Append should block ~1000ms for slave2, but took " + duration2 + "ms");
 
-        logger.info("[Step 6] Verifying both messages received on slave2");
-        logger.info("  Slave2 messages after 2200ms total: " + slave2.getMessages().size());
-        assertEquals(2, slave2.getMessages().size());
+        logger.info("[Step 6] Verifying both messages are on slave2 in order");
         String[] expectedContent = {"Message 1", "Message 2"};
         String[] actualContent = slave2.getMessages().stream().map(Message::getContent).toArray(String[]::new);
-        logger.info("  Content check - Expected: " + java.util.Arrays.toString(expectedContent) +
-                ", Actual: " + java.util.Arrays.toString(actualContent));
+        logger.info("  Content check - Expected: " + Arrays.toString(expectedContent) +
+                ", Actual: " + Arrays.toString(actualContent));
         assertArrayEquals(expectedContent, actualContent);
 
-        logger.info("[Step 7] Removing delay from slave2 and appending third message");
+        logger.info("[Step 7] Removing slave2 delay and appending Message 3 - should complete quickly");
         slave2.setDelayMs(0L);
+        long start3 = System.currentTimeMillis();
         masterNode.append("Message 3", 3);
-        logger.info("  Appended: Message 3 (no delay)");
+        long duration3 = System.currentTimeMillis() - start3;
+        logger.info("  Message 3 append duration: " + duration3 + "ms (no delay)");
+        assertTrue(duration3 < 500, "Message 3 should complete quickly without delay, but took " + duration3 + "ms");
 
-        logger.info("[Step 8] Verifying all three messages on slave2");
+        logger.info("[Step 8] Verifying all three messages on slave2 in order");
         String[] expectedAll = {"Message 1", "Message 2", "Message 3"};
         String[] actualAll = slave2.getMessages().stream().map(Message::getContent).toArray(String[]::new);
-        logger.info("  Content check - Expected: " + java.util.Arrays.toString(expectedAll) +
-                ", Actual: " + java.util.Arrays.toString(actualAll));
+        logger.info("  Content check - Expected: " + Arrays.toString(expectedAll) +
+                ", Actual: " + Arrays.toString(actualAll));
         assertArrayEquals(expectedAll, actualAll);
+
         logger.info("<<< TEST PASSED\n");
     }
 
@@ -268,6 +292,16 @@ public class MasterSecondaryTest {
         assertEquals(3, slave1.getMessages().size());
         assertEquals(3, slave2.getMessages().size());
 
+        logger.info("[Step 8] Verifying master and both slaves hold messages in the order they were appended");
+        String[] expectedOrder = {"Message 1", "Message 2", "Message 3"};
+        assertArrayEquals(expectedOrder, contents(masterNode.getMessages()), "Master order");
+        assertArrayEquals(expectedOrder, contents(slave1.getMessages()), "Slave1 order");
+        assertArrayEquals(expectedOrder, contents(slave2.getMessages()), "Slave2 order");
+
         logger.info("<<< TEST PASSED - Variable blocking behavior verified\n");
+    }
+
+    private static String[] contents(List<Message> messages) {
+        return messages.stream().map(Message::getContent).toArray(String[]::new);
     }
 }

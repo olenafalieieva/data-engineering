@@ -7,11 +7,12 @@ import org.replog.store.Interface.MessagesStore;
 import org.replog.store.MessagesStoreRandomOrder;
 
 import java.util.Scanner;
+import java.util.concurrent.CountDownLatch;
 
 public class SecondaryApplication {
     public static void main(String[] args) throws Exception {
         String nodeId = "slave1";
-        int port = 8082;
+        int port = 8081;
         String storeType = "random";
         long delayMs = 0L;
 
@@ -50,12 +51,16 @@ public class SecondaryApplication {
                 return new MessagesStoreRandomOrder();
         }
 
-    private static void interactiveMode(SecondaryNode slaveNode) {
+    private static void interactiveMode(SecondaryNode slaveNode) throws InterruptedException {
         Scanner scanner = new Scanner(System.in);
         System.out.println("Commands: list, exit");
 
         while (true) {
             System.out.print("[" + slaveNode.getNodeId() + "]> ");
+            if (!scanner.hasNextLine()) {
+                // No terminal attached (e.g. docker run without -i): keep serving HTTP instead of exiting
+                new CountDownLatch(1).await();
+            }
             String input = scanner.nextLine().trim();
 
             if (input.isEmpty()) continue;

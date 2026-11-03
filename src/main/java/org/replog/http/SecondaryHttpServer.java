@@ -9,8 +9,13 @@ import org.replog.node.SecondaryNode;
 
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public class SecondaryHttpServer {private final HttpServer server;
+public class SecondaryHttpServer {
+    private static final Logger logger = Logger.getLogger(SecondaryHttpServer.class.getName());
+
+    private final HttpServer server;
     private final SecondaryNode slaveNode;
     private final ObjectMapper objectMapper;
 
@@ -32,20 +37,20 @@ public class SecondaryHttpServer {private final HttpServer server;
                 return;
             }
 
-            String body = new String(exchange.getRequestBody().readAllBytes());
+            String body = new String(exchange.getRequestBody().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             Message message = objectMapper.readValue(body, Message.class);
             slaveNode.append(message);
 
             exchange.sendResponseHeaders(200, 0);
             exchange.close();
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Append request failed", e);
             try {
                 byte[] err = ("Error: " + e).getBytes(java.nio.charset.StandardCharsets.UTF_8);
                 exchange.sendResponseHeaders(500, err.length);
                 exchange.getResponseBody().write(err);
             } catch (Exception ex) {
-                ex.printStackTrace();
+                logger.log(Level.SEVERE, "Failed to send error response", ex);
             }
         }
     }
@@ -59,26 +64,28 @@ public class SecondaryHttpServer {private final HttpServer server;
             }
 
             var messages = slaveNode.getMessages();
-            String jsonResponse = objectMapper.writeValueAsString(messages);
+            byte[] responseBytes = objectMapper.writeValueAsString(messages)
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, jsonResponse.length());
-            OutputStream os = exchange.getResponseBody();
-            os.write(jsonResponse.getBytes());
-            os.close();
+            exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+            // Content-Length must be the byte count, not the character count
+            exchange.sendResponseHeaders(200, responseBytes.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(responseBytes);
+            }
         } catch (Exception e) {
             try {
                 exchange.sendResponseHeaders(500, 0);
                 exchange.close();
             } catch (Exception ex) {
-                ex.printStackTrace();
+                logger.log(Level.SEVERE, "Failed to send error response", ex);
             }
         }
     }
 
     public void start() {
         server.start();
-        System.out.println("[" + slaveNode.getNodeId() + "] HTTP Server started on port " + server.getAddress().getPort());
+        logger.info("[" + slaveNode.getNodeId() + "] HTTP Server started on port " + server.getAddress().getPort());
     }
 
     public void stop() {

@@ -5,19 +5,18 @@ import org.replog.dto.AppendResponse;
 import org.replog.http.MasterHttpServer;
 import org.replog.network.HttpNetworkClient;
 import org.replog.network.Interface.NetworkClient;
-import org.replog.network.QueueNetworkStub;
 import org.replog.node.MasterNode;
 import org.replog.store.Interface.MessagesStore;
 import org.replog.store.MessagesStoreRandomOrder;
 
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 public class MasterApplication {
 
     public static void main(String[] args) throws Exception {
         int port = 8080;
-        boolean useHttp = true;
-        String networkType = "queue";
+        String networkType = "http";
         String storeType = "random";
         Map<String, String> slaveEndpoints = null;
 
@@ -26,7 +25,6 @@ public class MasterApplication {
                 port = Integer.parseInt(args[++i]);
             } else if ("--network".equals(args[i])) {
                 networkType = args[++i];
-                useHttp = "http".equals(networkType);
             } else if ("--store".equals(args[i])) {
                 storeType = args[++i];
             } else if ("--slave-endpoints".equals(args[i])) {
@@ -66,14 +64,12 @@ public class MasterApplication {
 
     private static NetworkClient createNetworkClient(String networkType, List<String> slaveNodeIds,
                                                      Map<String, String> slaveEndpoints) {
-        switch (networkType.toLowerCase()) {
-            case "http":
-                Map<String, String> endpoints = slaveEndpoints != null ? slaveEndpoints : defaultEndpoints();
-                return new HttpNetworkClient(endpoints);
-            case "queue":
-            default:
-                return new QueueNetworkStub(slaveNodeIds.toArray(new String[0]));
+        // The in-memory queue stub has no secondaries attached in this app, so only HTTP is supported here.
+        if (!"http".equalsIgnoreCase(networkType)) {
+            throw new IllegalArgumentException("Unsupported network type: " + networkType + " (only 'http' is supported)");
         }
+        Map<String, String> endpoints = slaveEndpoints != null ? slaveEndpoints : defaultEndpoints();
+        return new HttpNetworkClient(endpoints);
     }
 
     private static Map<String, String> defaultEndpoints() {
@@ -94,7 +90,7 @@ public class MasterApplication {
         return map;
     }
 
-    private static void interactiveMode(MasterNode masterNode) {
+    private static void interactiveMode(MasterNode masterNode) throws InterruptedException {
         Scanner scanner = new Scanner(System.in);
         System.out.println("Commands:");
         System.out.println("  append <msg>              - Append message (default writeConcern=3)");
@@ -104,6 +100,10 @@ public class MasterApplication {
 
         while (true) {
             System.out.print("> ");
+            if (!scanner.hasNextLine()) {
+                // No terminal attached (e.g. docker run without -i): keep serving HTTP instead of exiting
+                new CountDownLatch(1).await();
+            }
             String input = scanner.nextLine().trim();
 
             if (input.isEmpty()) continue;

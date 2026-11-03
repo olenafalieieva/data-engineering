@@ -9,20 +9,19 @@ import org.replog.store.Interface.MessagesStore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.logging.Logger;
 
 public class MasterNode {
+    private static final Logger logger = Logger.getLogger(MasterNode.class.getName());
+
     private final MessagesStore store;
     private final NetworkClient networkClient;
     private final List<String> slaveNodeIds;
-    private final ExecutorService replicationExecutor;
 
     public MasterNode(MessagesStore store, NetworkClient networkClient, List<String> slaveNodeIds) {
         this.store = store;
         this.networkClient = networkClient;
         this.slaveNodeIds = slaveNodeIds;
-        this.replicationExecutor = Executors.newFixedThreadPool(slaveNodeIds.size());
     }
 
     public AppendResponse append(String content, int writeConcern) {
@@ -48,35 +47,22 @@ public class MasterNode {
     }
 
     private int replicateToSlaves(Message message) {
-        List<CompletableFuture<Integer>> futures = new ArrayList<>();
-
+        // Send to all slaves at once; each ack becomes 1 (stored) or 0 (failed),
+        // so one failed slave only lowers the confirmation count.
+        List<CompletableFuture<Integer>> acks = new ArrayList<>();
         for (String slaveId : slaveNodeIds) {
-            CompletableFuture<Integer> future = CompletableFuture.supplyAsync(() -> {
-                try {
-                    Integer res = networkClient.appendMessage(slaveId, message).join();
-                    return res;
-
-                } catch (Exception e) {
-                    System.err.println("Failed to replicate to slave " + slaveId + ": " + e.getMessage());
-                    return 0;
-                }
-            }, replicationExecutor);
-            futures.add(future);
+            acks.add(networkClient.appendMessage(slaveId, message)
+                    .handle((ignored, error) -> {
+                        if (error != null) {
+                            logger.warning("Failed to replicate to slave " + slaveId + ": " + error.getMessage());
+                            return 0;
+                        }
+                        return 1;
+                    }));
         }
 
-        try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-            int confirmations = 0;
-            for (CompletableFuture<Integer> future : futures) {
-                if (future.join() != 0) {
-                    confirmations++;
-                }
-            }
-            return confirmations;
-        } catch (Exception e) {
-            System.err.println("Replication interrupted: " + e.getMessage());
-            return 0;
-        }
+        CompletableFuture.allOf(acks.toArray(new CompletableFuture[0])).join();
+        return acks.stream().mapToInt(CompletableFuture::join).sum();
     }
 
     public List<Message> getMessages() {
@@ -85,6 +71,5 @@ public class MasterNode {
 
     public void close() throws Exception {
         networkClient.close();
-        replicationExecutor.shutdown();
     }
 }

@@ -1,6 +1,10 @@
 package org.replog.dto;
 
+import java.util.logging.Logger;
+
 public class AppendResponse {
+    private static final Logger logger = Logger.getLogger(AppendResponse.class.getName());
+
     private final boolean success;
     private final Integer messageId;
     private final int confirmations;
@@ -14,13 +18,13 @@ public class AppendResponse {
     }
 
     public static AppendResponse success(Integer messageId, int confirmations) {
-        System.out.println("[AppendResponse] success: messageId=" + messageId
+        logger.info("[AppendResponse] success: messageId=" + messageId
                 + ", confirmations=" + confirmations);
         return new AppendResponse(true, messageId, confirmations, null);
     }
 
     public static AppendResponse failure(String error) {
-        System.err.println("[AppendResponse] failure: " + error);
+        logger.warning("[AppendResponse] failure: " + error);
         return new AppendResponse(false, null, 0, error);
     }
 

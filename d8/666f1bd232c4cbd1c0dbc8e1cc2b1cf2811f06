@@ -1,0 +1,38 @@
+Dockerfile
+  s_b56add07d15d2c::t_39787b04bd1d22 1-4,6-8,11
+  s_b56add07d15d2c::t_10b2e834749d83 5,9
+  s_b56add07d15d2c::t_eaff0679ba0188 10
+docker-compose.yml
+  s_b56add07d15d2c::t_eaff0679ba0188 1-29
+.dockerignore
+  s_b56add07d15d2c::t_39787b04bd1d22 1-4
+README.md
+  s_b56add07d15d2c::t_0e72d6b4356ee3 107,112-119
+  s_b56add07d15d2c::t_722cdb068bd5f5 1-2,4-91,93-106,108-111,120-123
+  h_aa63ad89b614d5 3,92
+gradlew
+  h_aa63ad89b614d5 1-248
+gradlew.bat
+  h_aa63ad89b614d5 1-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d8666f1bd232c4cbd1c0dbc8e1cc2b1cf2811f06",
+  "prompts": {},
+  "humans": {
+    "h_aa63ad89b614d5": {
+      "author": "Olena Falieieva <olena.falieieva@peoplefinders.com>"
+    }
+  },
+  "sessions": {
+    "s_b56add07d15d2c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "87800b27-dfb7-42dd-af00-2c60742c656e",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "Olena Falieieva <olena.falieieva@peoplefinders.com>"
+    }
+  }
+}

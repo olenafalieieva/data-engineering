@@ -97,6 +97,7 @@ Expected result: `BUILD SUCCESSFUL`, with 9 tests passing.
 
 To see the results:
 
+- Console output: each test's result, plus the test and application logs (`org.replog`, FINE level), is printed during the run. The logging setup is in `src/test/resources/logging.properties`.
 - Console summary: printed at the end of the Gradle run.
 - HTML report: `build/reports/tests/test/index.html`
 - XML results: `build/test-results/test/*.xml`

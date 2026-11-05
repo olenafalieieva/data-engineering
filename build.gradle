@@ -44,4 +44,14 @@ dependencies {
 
 test {
     useJUnitPlatform()
+
+    // Always run the tests, so their output is printed on every ./gradlew test (no "up-to-date" skip)
+    outputs.upToDateWhen { false }
+
+    // Use the test logging config (FINE level) and print all test and application output to the console
+    systemProperty 'java.util.logging.config.file', file('src/test/resources/logging.properties').absolutePath
+    testLogging {
+        showStandardStreams = true
+        events 'passed', 'failed', 'skipped', 'standardOut', 'standardError'
+    }
 }

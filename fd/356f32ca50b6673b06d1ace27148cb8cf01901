@@ -1,0 +1,29 @@
+src/test/resources/logging.properties
+  s_b56add07d15d2c::t_f27ef44b3d9936 1-6
+build.gradle
+  s_b56add07d15d2c::t_4e7b66a91c9942 48-50
+  s_b56add07d15d2c::t_fe6d3d1e8a0ae0 47,51-56
+README.md
+  s_b56add07d15d2c::t_f49255d071721c 100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fd356f32ca50b6673b06d1ace27148cb8cf01901",
+  "prompts": {},
+  "humans": {
+    "h_aa63ad89b614d5": {
+      "author": "Olena Falieieva <olena.falieieva@peoplefinders.com>"
+    }
+  },
+  "sessions": {
+    "s_b56add07d15d2c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "87800b27-dfb7-42dd-af00-2c60742c656e",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "Olena Falieieva <olena.falieieva@peoplefinders.com>"
+    }
+  }
+}

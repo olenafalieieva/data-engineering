@@ -1,0 +1,65 @@
+src/main/java/org/replog/network/QueueNetworkStub.java
+  s_b56add07d15d2c::t_c9be4802404faf 7-10,18-20,43-56,58-64
+src/main/java/org/replog/http/SecondaryHttpServer.java
+  s_b56add07d15d2c::t_ce7b04c373d08d 94-95
+  s_b56add07d15d2c::t_bfb0864d8cb9c9 12
+src/main/java/org/replog/node/MasterNode.java
+  s_b56add07d15d2c::t_2da0efd65a2a8e 12,21-23,31-34,36-38,41-44,47-49,51,58-70,72,76-78,81-83,88-93
+docker-compose.yml
+  s_b56add07d15d2c::t_6e4f9347196ac6 19-20
+  s_b56add07d15d2c::t_92d2cfabaf1606 28-29
+src/test/resources/logging.properties
+  s_b56add07d15d2c::t_61e797454acc52 2,5-6
+  s_b56add07d15d2c::t_ecacf817985a8a 1,3-4
+src/main/java/org/replog/http/MasterHttpServer.java
+  s_b56add07d15d2c::t_82ef17c504288d 54
+  s_b56add07d15d2c::t_aea4ef3a355f35 14
+  s_b56add07d15d2c::t_5d94f343e6f7d5 126-127
+src/main/java/org/replog/node/SecondaryNode.java
+  s_b56add07d15d2c::t_dfbd22179ef110 7-8,18-22,51-66
+  s_b56add07d15d2c::t_2462b3bde95256 67-68
+build.gradle
+  s_b56add07d15d2c::t_e407215d3a07e2 47-53
+src/main/java/org/replog/store/MessagesStoreInMemory.java
+  s_b56add07d15d2c::t_35435d7455192b 11
+src/test/java/org/replog/MasterSecondaryTest.java
+  s_b56add07d15d2c::t_095847a228db99 307-310,312-361,363-378,380-398,400-418
+  s_b56add07d15d2c::t_62ba4aa82351b8 15,18-19
+  s_b56add07d15d2c::t_35435d7455192b 11,41-43,86,103,133,168,224,256,311,362,379,399
+src/main/java/org/replog/dto/Message.java
+  s_b56add07d15d2c::t_fa80e5678a2f53 10-11,17,21,27,33-34,36
+src/main/java/org/replog/SecondaryApplication.java
+  s_b56add07d15d2c::t_35435d7455192b 7,51
+README.md
+  s_b56add07d15d2c::t_a437c5e9490ebc 57-90
+  s_b56add07d15d2c::t_fef1964919a92b 99-131
+  s_b56add07d15d2c::t_e0b9c00ebe2e40 132
+  s_b56add07d15d2c::t_0adf1f31dd0bf5 142-151
+  s_b56add07d15d2c::t_6251b801d1c21d 175
+  s_b56add07d15d2c::t_3d9da7cefd7151 164,167-169
+src/main/java/org/replog/MasterApplication.java
+  s_b56add07d15d2c::t_52e8267729b85a 97
+  s_b56add07d15d2c::t_2c2864e8f0b8e1 122-123
+  s_b56add07d15d2c::t_35435d7455192b 10,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "860fe747e7cc2554c9966bf12e893a53ebd29af3",
+  "prompts": {},
+  "humans": {
+    "h_aa63ad89b614d5": {
+      "author": "Olena Falieieva <olena.falieieva@peoplefinders.com>"
+    }
+  },
+  "sessions": {
+    "s_b56add07d15d2c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "87800b27-dfb7-42dd-af00-2c60742c656e",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "Olena Falieieva <olena.falieieva@peoplefinders.com>"
+    }
+  }
+}

@@ -11,6 +11,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -50,7 +51,7 @@ public class MasterHttpServer {
             if (request.containsKey("writeConcern")) {
                 writeConcern = ((Number) request.get("writeConcern")).intValue();
             }
-            if (writeConcern < 1 || writeConcern > 3) {
+            if (writeConcern < 1 || writeConcern > masterNode.getMaxWriteConcern()) {
                 sendEmptyResponse(exchange, 400);
                 return;
             }
@@ -122,5 +123,7 @@ public class MasterHttpServer {
 
     public void stop() {
         server.stop(0);
+        // The request pool's threads are non-daemon; without this the JVM keeps running after stop
+        ((ExecutorService) server.getExecutor()).shutdownNow();
     }
 }

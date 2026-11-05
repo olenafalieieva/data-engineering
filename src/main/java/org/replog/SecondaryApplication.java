@@ -4,7 +4,7 @@ package org.replog;
 import org.replog.http.SecondaryHttpServer;
 import org.replog.node.SecondaryNode;
 import org.replog.store.Interface.MessagesStore;
-import org.replog.store.MessagesStoreRandomOrder;
+import org.replog.store.MessagesStoreInMemory;
 
 import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
@@ -48,7 +48,7 @@ public class SecondaryApplication {
     }
 
     private static MessagesStore createStore() {
-                return new MessagesStoreRandomOrder();
+                return new MessagesStoreInMemory();
         }
 
     private static void interactiveMode(SecondaryNode slaveNode) throws InterruptedException {

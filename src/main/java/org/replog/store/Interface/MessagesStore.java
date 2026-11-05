@@ -6,8 +6,6 @@ import java.util.List;
 
 
 public interface MessagesStore {
-    Integer append(String content, int writeConcern);
-
     void appendMsg(Message message);
 
     List<Message> getAll();

@@ -9,6 +9,7 @@ import org.replog.store.Interface.MessagesStore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 public class MasterNode {
@@ -17,6 +18,9 @@ public class MasterNode {
     private final MessagesStore store;
     private final NetworkClient networkClient;
     private final List<String> slaveNodeIds;
+    // Sequence assignment and store insert happen under one lock, so the master's order is the total order
+    private final Object sequenceLock = new Object();
+    private long nextSequence = 1;
 
     public MasterNode(MessagesStore store, NetworkClient networkClient, List<String> slaveNodeIds) {
         this.store = store;
@@ -24,45 +28,69 @@ public class MasterNode {
         this.slaveNodeIds = slaveNodeIds;
     }
 
+    // Write concern w ranges from 1 (master only) to the number of nodes (master + all secondaries)
+    public int getMaxWriteConcern() {
+        return slaveNodeIds.size() + 1;
+    }
+
     public AppendResponse append(String content, int writeConcern) {
-        Integer messageId = store.append(content, writeConcern);
-        Message message = new Message(messageId, content, writeConcern);
-
-        int confirmations = 1;
-
-        if (writeConcern == 1) {
-            return AppendResponse.success(messageId, confirmations);
+        if (writeConcern < 1 || writeConcern > getMaxWriteConcern()) {
+            return AppendResponse.failure("Write concern must be between 1 and " + getMaxWriteConcern());
         }
 
-        if (writeConcern > 1) {
-            confirmations += replicateToSlaves(message);
+        Message message;
+        synchronized (sequenceLock) {
+            message = new Message(store.generateId(), nextSequence++, content, writeConcern);
+            store.appendMsg(message);
         }
+
+        // w=1 needs no secondary ACKs; w=n waits for ACKs from n-1 secondaries
+        int confirmations = 1 + replicateToSlaves(message, writeConcern - 1);
 
         if (confirmations >= writeConcern) {
-            return AppendResponse.success(messageId, confirmations);
+            return AppendResponse.success(message.getId(), confirmations);
         } else {
             return AppendResponse.failure("Not enough confirmations. Got " + confirmations +
                     ", required " + writeConcern);
         }
     }
 
-    private int replicateToSlaves(Message message) {
-        // Send to all slaves at once; each ack becomes 1 (stored) or 0 (failed),
-        // so one failed slave only lowers the confirmation count.
-        List<CompletableFuture<Integer>> acks = new ArrayList<>();
+    // Sends to every secondary, but returns as soon as requiredAcks have stored the message.
+    // Sends that are still in flight keep running in the background.
+    // Returns the number of secondary ACKs counted when the decision was made.
+    private int replicateToSlaves(Message message, int requiredAcks) {
+        AtomicInteger ackCount = new AtomicInteger();
+        AtomicInteger failureCount = new AtomicInteger();
+        int maxFailures = slaveNodeIds.size() - requiredAcks;
+        CompletableFuture<Boolean> decided = new CompletableFuture<>();
+        if (requiredAcks == 0) {
+            decided.complete(true);
+        }
+
+        List<CompletableFuture<Integer>> sends = new ArrayList<>();
         for (String slaveId : slaveNodeIds) {
-            acks.add(networkClient.appendMessage(slaveId, message)
+            sends.add(networkClient.appendMessage(slaveId, message)
                     .handle((ignored, error) -> {
                         if (error != null) {
                             logger.warning("Failed to replicate to slave " + slaveId + ": " + error.getMessage());
+                            if (failureCount.incrementAndGet() > maxFailures) {
+                                decided.complete(false);
+                            }
                             return 0;
+                        }
+                        if (ackCount.incrementAndGet() >= requiredAcks) {
+                            decided.complete(true);
                         }
                         return 1;
                     }));
         }
 
-        CompletableFuture.allOf(acks.toArray(new CompletableFuture[0])).join();
-        return acks.stream().mapToInt(CompletableFuture::join).sum();
+        boolean satisfied = decided.join();
+        if (!satisfied) {
+            // Let the remaining sends settle so the error reports the final ACK count
+            CompletableFuture.allOf(sends.toArray(new CompletableFuture[0])).join();
+        }
+        return ackCount.get();
     }
 
     public List<Message> getMessages() {

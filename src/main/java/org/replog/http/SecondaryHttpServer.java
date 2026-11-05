@@ -9,6 +9,7 @@ import org.replog.node.SecondaryNode;
 
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.util.concurrent.ExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -90,6 +91,8 @@ public class SecondaryHttpServer {
 
     public void stop() {
         server.stop(0);
+        // The request pool's threads are non-daemon; without this the JVM keeps running after stop
+        ((ExecutorService) server.getExecutor()).shutdownNow();
     }
 }
 

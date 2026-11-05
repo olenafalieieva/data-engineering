@@ -8,12 +8,15 @@ import org.replog.dto.Message;
 import org.replog.network.QueueNetworkStub;
 import org.replog.node.MasterNode;
 import org.replog.node.SecondaryNode;
-import org.replog.store.MessagesStoreRandomOrder;
+import org.replog.store.MessagesStoreInMemory;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,9 +38,9 @@ public class MasterSecondaryTest {
         networkStub = new QueueNetworkStub("slave1", "slave2");
 
         logger.info("[Step 2] Creating message stores for master and slave nodes");
-        MessagesStoreRandomOrder masterStore = new MessagesStoreRandomOrder();
-        MessagesStoreRandomOrder slave1Store = new MessagesStoreRandomOrder();
-        MessagesStoreRandomOrder slave2Store = new MessagesStoreRandomOrder();
+        MessagesStoreInMemory masterStore = new MessagesStoreInMemory();
+        MessagesStoreInMemory slave1Store = new MessagesStoreInMemory();
+        MessagesStoreInMemory slave2Store = new MessagesStoreInMemory();
 
         logger.info("[Step 3] Creating secondary (slave) node instances");
         slave1 = new SecondaryNode("slave1", slave1Store);
@@ -80,7 +83,7 @@ public class MasterSecondaryTest {
     void testAppendWithConsistencyLevelThree() {
         logger.info("\n>>> TEST: testAppendWithConsistencyLevelThree");
         logger.info("[Step 1] Creating master node with consistency level 3 (master + 2 slaves)");
-        masterNode = new MasterNode(new MessagesStoreRandomOrder(), networkStub,
+        masterNode = new MasterNode(new MessagesStoreInMemory(), networkStub,
                 Arrays.asList("slave1", "slave2"));
 
         logger.info("[Step 2] Appending message with consistency level 3 (waiting for 3 confirmations)");
@@ -97,7 +100,7 @@ public class MasterSecondaryTest {
     void testMessagesReplicatedToSlavesNoDelay() throws Exception {
         logger.info("\n>>> TEST: testMessagesReplicatedToSlavesNoDelay");
         logger.info("[Step 1] Creating master node with 2 slaves");
-        masterNode = new MasterNode(new MessagesStoreRandomOrder(), networkStub,
+        masterNode = new MasterNode(new MessagesStoreInMemory(), networkStub,
                 Arrays.asList("slave1", "slave2"));
 
         logger.info("[Step 2] Appending message to master with consistency level 3");
@@ -127,7 +130,7 @@ public class MasterSecondaryTest {
     void testListMessages() throws Exception {
         logger.info("\n>>> TEST: testListMessages");
         logger.info("[Step 1] Creating master node with 2 slaves");
-        masterNode = new MasterNode(new MessagesStoreRandomOrder(), networkStub,
+        masterNode = new MasterNode(new MessagesStoreInMemory(), networkStub,
                 Arrays.asList("slave1", "slave2"));
 
         logger.info("[Step 2] Appending 3 messages to master");
@@ -162,7 +165,7 @@ public class MasterSecondaryTest {
     void testTwoMsgsWithOneSlaveDelayed() throws Exception {
         logger.info("\n>>> TEST: testTwoMsgsWithOneSlaveDelayed");
         logger.info("[Step 1] Creating master node with 2 slaves");
-        masterNode = new MasterNode(new MessagesStoreRandomOrder(), networkStub,
+        masterNode = new MasterNode(new MessagesStoreInMemory(), networkStub,
                 Arrays.asList("slave1", "slave2"));
 
         logger.info("[Step 2] Setting slave2 delay to 1000ms (slave1 has no delay)");
@@ -218,7 +221,7 @@ public class MasterSecondaryTest {
     void testAppendBlocksUntilSlowestSlaveAcks() throws Exception {
         logger.info("\n>>> TEST: testAppendBlocksUntilSlowestSlaveAcks");
         logger.info("[Step 1] Creating master node with 2 slaves");
-        masterNode = new MasterNode(new MessagesStoreRandomOrder(), networkStub,
+        masterNode = new MasterNode(new MessagesStoreInMemory(), networkStub,
                 Arrays.asList("slave1", "slave2"));
 
         logger.info("[Step 2] Setting slave1 delay to 1500ms, slave2 delay to 2500ms (slave2 is slower)");
@@ -250,7 +253,7 @@ public class MasterSecondaryTest {
     void testAppendBlockingWithVariableDelays() throws Exception {
         logger.info("\n>>> TEST: testAppendBlockingWithVariableDelays");
         logger.info("[Step 1] Creating master node with 2 slaves");
-        masterNode = new MasterNode(new MessagesStoreRandomOrder(), networkStub,
+        masterNode = new MasterNode(new MessagesStoreInMemory(), networkStub,
                 Arrays.asList("slave1", "slave2"));
 
         logger.info("[Step 2] First append: Setting slave1 delay to 800ms, slave2 delay to 800ms");
@@ -299,6 +302,118 @@ public class MasterSecondaryTest {
         assertArrayEquals(expectedOrder, contents(slave2.getMessages()), "Slave2 order");
 
         logger.info("<<< TEST PASSED - Variable blocking behavior verified\n");
+    }
+
+    @Test
+    void testAcceptanceScenarioWithDelayedSecondary() throws Exception {
+        logger.info("\n>>> TEST: testAcceptanceScenarioWithDelayedSecondary");
+        logger.info("[Step 1] Start master, slave1 (no delay), slave2 (1000ms delay)");
+        masterNode = new MasterNode(new MessagesStoreInMemory(), networkStub,
+                Arrays.asList("slave1", "slave2"));
+        slave2.setDelayMs(1000);
+
+        logger.info("[Step 2] send (Msg1, W=1) - Ok");
+        assertTrue(masterNode.append("Msg1", 1).isSuccess());
+
+        logger.info("[Step 3] send (Msg2, W=2) - Ok, returns after slave1 ACK without waiting for slave2");
+        long start2 = System.currentTimeMillis();
+        assertTrue(masterNode.append("Msg2", 2).isSuccess());
+        long duration2 = System.currentTimeMillis() - start2;
+        assertTrue(duration2 < 500, "W=2 should not wait for delayed slave2, took " + duration2 + "ms");
+
+        logger.info("[Step 4] send (Msg3, W=3) - waits for slave2 because of its delay");
+        CompletableFuture<AppendResponse> msg3 =
+                CompletableFuture.supplyAsync(() -> masterNode.append("Msg3", 3), executor);
+        Thread.sleep(200);
+        assertFalse(msg3.isDone(), "W=3 should still be waiting for slave2");
+
+        logger.info("[Step 5] send (Msg4, W=1) - Ok, must not be blocked by step 4");
+        long start4 = System.currentTimeMillis();
+        AppendResponse response4 = masterNode.append("Msg4", 1);
+        long duration4 = System.currentTimeMillis() - start4;
+        assertTrue(response4.isSuccess());
+        assertTrue(duration4 < 500, "W=1 should not be blocked by Msg3, took " + duration4 + "ms");
+        assertFalse(msg3.isDone(), "Msg3 should still be waiting after Msg4 completed");
+
+        logger.info("[Step 6] Check slave2 while Msg3 is pending: must not contain Msg3, and must be a prefix of [Msg1, Msg2, Msg3]");
+        String[] slave2Now = contents(slave2.getMessages());
+        assertTrue(slave2Now.length <= 2, "Msg3 should not be on slave2 yet, got " + Arrays.toString(slave2Now));
+        String[] order = {"Msg1", "Msg2", "Msg3"};
+        for (int i = 0; i < slave2Now.length; i++) {
+            assertEquals(order[i], slave2Now[i]);
+        }
+
+        logger.info("  Waiting for step 4 to complete");
+        assertTrue(msg3.get(5, TimeUnit.SECONDS).isSuccess());
+        awaitContents(slave2::getMessages, "Msg1", "Msg2", "Msg3");
+
+        logger.info("[Step 7] Check master and slave1: [Msg1, Msg2, Msg3, Msg4] (Msg4 replicates in the background)");
+        awaitContents(masterNode::getMessages, "Msg1", "Msg2", "Msg3", "Msg4");
+        awaitContents(slave1::getMessages, "Msg1", "Msg2", "Msg3", "Msg4");
+
+        logger.info("<<< TEST PASSED\n");
+    }
+
+    @Test
+    void testSecondaryAppliesReorderedMessagesInSequenceOrder() throws Exception {
+        logger.info("\n>>> TEST: testSecondaryAppliesReorderedMessagesInSequenceOrder");
+        logger.info("[Step 1] Reorder the next 2 messages to slave1 (delivered in reverse)");
+        networkStub.reorderMessages("slave1", 2);
+        masterNode = new MasterNode(new MessagesStoreInMemory(), networkStub,
+                Arrays.asList("slave1", "slave2"));
+
+        logger.info("[Step 2] Append m1 and m2 with W=1");
+        masterNode.append("m1", 1);
+        masterNode.append("m2", 1);
+
+        logger.info("[Step 3] slave1 must list m1, m2 in the order the master appended them");
+        awaitContents(slave1::getMessages, "m1", "m2");
+        assertArrayEquals(new String[]{"m1", "m2"}, contents(masterNode.getMessages()));
+
+        logger.info("<<< TEST PASSED\n");
+    }
+
+    @Test
+    void testSecondaryHoldsOutOfOrderMessagesAndIgnoresDuplicates() {
+        logger.info("\n>>> TEST: testSecondaryHoldsOutOfOrderMessagesAndIgnoresDuplicates");
+        SecondaryNode node = new SecondaryNode("solo", new MessagesStoreInMemory());
+
+        logger.info("[Step 1] Deliver sequence 2 first - must be held back");
+        node.append(new Message(2, 2L, "second", 1));
+        assertEquals(0, node.getMessages().size());
+
+        logger.info("[Step 2] Deliver sequence 1 - applies 1, then the held 2");
+        node.append(new Message(1, 1L, "first", 1));
+        assertArrayEquals(new String[]{"first", "second"}, contents(node.getMessages()));
+
+        logger.info("[Step 3] Deliver sequence 1 again - ignored as a duplicate");
+        node.append(new Message(1, 1L, "first", 1));
+        assertArrayEquals(new String[]{"first", "second"}, contents(node.getMessages()));
+
+        logger.info("<<< TEST PASSED\n");
+    }
+
+    @Test
+    void testWriteConcernOutOfRangeIsRejected() {
+        logger.info("\n>>> TEST: testWriteConcernOutOfRangeIsRejected");
+        masterNode = new MasterNode(new MessagesStoreInMemory(), networkStub,
+                Arrays.asList("slave1", "slave2"));
+
+        AppendResponse response = masterNode.append("x", 4);
+
+        assertFalse(response.isSuccess());
+        assertEquals("Write concern must be between 1 and 3", response.getError());
+        assertEquals(0, masterNode.getMessages().size());
+        logger.info("<<< TEST PASSED\n");
+    }
+
+    // Eventual consistency: polls until the node lists exactly the expected contents
+    private static void awaitContents(Supplier<List<Message>> nodeMessages, String... expected) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 5000;
+        while (!Arrays.equals(expected, contents(nodeMessages.get())) && System.currentTimeMillis() < deadline) {
+            Thread.sleep(20);
+        }
+        assertArrayEquals(expected, contents(nodeMessages.get()));
     }
 
     private static String[] contents(List<Message> messages) {

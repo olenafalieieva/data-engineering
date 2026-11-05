@@ -16,7 +16,8 @@ services:
     build: .
     image: replicated-log
     entrypoint: ["java", "-cp", "/app/lib/*", "org.replog.SecondaryApplication"]
-    command: ["--id", "slave1", "--port", "8081"]
+    # Delay (ms) before each message is stored; set SLAVE1_DELAY_MS to simulate a slow replica
+    command: ["--id", "slave1", "--port", "8081", "--delay", "${SLAVE1_DELAY_MS:-0}"]
     ports:
       - "8081:8081"
 
@@ -24,6 +25,7 @@ services:
     build: .
     image: replicated-log
     entrypoint: ["java", "-cp", "/app/lib/*", "org.replog.SecondaryApplication"]
-    command: ["--id", "slave2", "--port", "8082"]
+    # Delay (ms) before each message is stored; set SLAVE2_DELAY_MS to simulate a slow replica
+    command: ["--id", "slave2", "--port", "8082", "--delay", "${SLAVE2_DELAY_MS:-0}"]
     ports:
       - "8082:8082"

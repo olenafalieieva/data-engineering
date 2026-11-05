@@ -8,16 +8,8 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class MessagesStoreRandomOrder implements MessagesStore {
+public class MessagesStoreInMemory implements MessagesStore {
     private final CopyOnWriteArrayList<Message> messages = new CopyOnWriteArrayList<>();
-
-    @Override
-    public Integer append(String content, int writeConcern) {
-        Integer id = generateId();
-        Message message = new Message(id, content, writeConcern);
-        messages.add(message);
-        return id;
-    }
 
     @Override
     public Integer generateId() {

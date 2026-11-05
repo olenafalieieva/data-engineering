@@ -7,7 +7,7 @@ import org.replog.network.HttpNetworkClient;
 import org.replog.network.Interface.NetworkClient;
 import org.replog.node.MasterNode;
 import org.replog.store.Interface.MessagesStore;
-import org.replog.store.MessagesStoreRandomOrder;
+import org.replog.store.MessagesStoreInMemory;
 
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -59,7 +59,7 @@ public class MasterApplication {
     }
 
     private static MessagesStore createStore() {
-        return new MessagesStoreRandomOrder();
+        return new MessagesStoreInMemory();
         }
 
     private static NetworkClient createNetworkClient(String networkType, List<String> slaveNodeIds,
@@ -94,7 +94,7 @@ public class MasterApplication {
         Scanner scanner = new Scanner(System.in);
         System.out.println("Commands:");
         System.out.println("  append <msg>              - Append message (default writeConcern=3)");
-        System.out.println("  append <msg> <concern>    - Append with specific write concern (1-3)");
+        System.out.println("  append <msg> <concern>    - Append with specific write concern (1-" + masterNode.getMaxWriteConcern() + ")");
         System.out.println("  list                      - Show all messages");
         System.out.println("  exit                      - Exit\n");
 
@@ -119,8 +119,8 @@ public class MasterApplication {
                 if (parts.length == 2 && parts[1].matches("\\d+")) {
                     content = parts[0];
                     writeConcern = Integer.parseInt(parts[1]);
-                    if (writeConcern < 1 || writeConcern > 3) {
-                        System.out.println("✗ Write concern must be 1-3");
+                    if (writeConcern < 1 || writeConcern > masterNode.getMaxWriteConcern()) {
+                        System.out.println("✗ Write concern must be 1-" + masterNode.getMaxWriteConcern());
                         continue;
                     }
                 }
